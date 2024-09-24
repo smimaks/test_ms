@@ -2,7 +2,7 @@ import envs from '../../config/envs.js';
 import mysql2 from 'mysql2/promise';
 import { getTables } from './helpers/getTables.js';
 
-const connection = await mysql2.createConnection({
+const pool = await mysql2.createPool({
     host: envs.DB_HOST,
     user: envs.DB_USER,
     password: envs.DB_PASSWORD,
@@ -10,11 +10,13 @@ const connection = await mysql2.createConnection({
 });
 
 async function createTables({ fileNames, tables }) {
+    let connection;
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction(err => {
             if (err) throw err;
         });
-        const promises = tables.map(table => connection.execute(table));
+        const promises = tables.map(table => connection.query(table));
         await Promise.all(promises);
         await connection.commit();
         console.log('Success create db scripts in ' + fileNames + ' files!');
@@ -29,4 +31,4 @@ async function createTables({ fileNames, tables }) {
 const { fileNames, tables } = getTables();
 createTables({ fileNames, tables });
 
-export default connection;
+export default pool;
